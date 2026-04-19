@@ -7,12 +7,14 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Esto sirve los archivos de la carpeta public
+// Servir archivos estáticos desde la carpeta 'public'
 app.use(express.static(path.join(__dirname, 'public')));
 
 let jugadores = {};
 
 io.on('connection', (socket) => {
+    console.log('Cliente conectado:', socket.id);
+
     socket.on('unirse', (data) => {
         socket.join(data.sala);
         jugadores[socket.id] = { x: 0, z: 0, sala: data.sala };
@@ -22,6 +24,7 @@ io.on('connection', (socket) => {
         if (jugadores[socket.id]) {
             jugadores[socket.id].x = data.x;
             jugadores[socket.id].z = data.z;
+            // Enviar a todos los de la misma sala
             io.to(jugadores[socket.id].sala).emit('jugadores', jugadores);
         }
     });
@@ -46,5 +49,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Servidor funcionando en puerto ${PORT}`);
+    console.log(`Servidor escuchando en puerto ${PORT}`);
 });
