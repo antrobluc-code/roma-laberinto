@@ -71,14 +71,19 @@ function crearInterfazUI() {
 
 function pedirPermisoGiroscopio() {
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        DeviceOrientationEvent.requestPermission().then(state => { if (state === 'granted') activarGiro(); });
-    } else { activarGiro(); }
+        DeviceOrientationEvent.requestPermission().then(state => {
+            if (state === 'granted') { activarGiro(); alert("Giroscopio Autorizado"); }
+        }).catch(err => alert("Error: " + err));
+    } else {
+        activarGiro(); alert("Giroscopio Activado");
+    }
 }
 
 function activarGiro() {
     window.addEventListener('deviceorientation', (e) => {
-        inclinacionX = e.gamma * 0.08; inclinacionZ = (e.beta - 45) * 0.08;
-    });
+        inclinacionX = e.gamma * 0.1;
+        inclinacionZ = (e.beta - 45) * 0.1; 
+    }, true);
 }
 
 async function gestionarMicro() {
@@ -99,9 +104,10 @@ async function iniciarJuego() {
 
     renderizador = new THREE.WebGLRenderer({ canvas: document.getElementById('game-canvas'), antialias: true });
     renderizador.setSize(window.innerWidth, window.innerHeight);
+    renderizador.setPixelRatio(window.devicePixelRatio);
 
     escena = new THREE.Scene(); escena.background = new THREE.Color(0xf0f3f4);
-    camara = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 1, 5000);
+    camara = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 5000);
     escena.add(new THREE.AmbientLight(0xffffff, 1.2));
 
     const tam = 35;
@@ -144,14 +150,15 @@ function animar() {
 
     const velBase = 3.0;
     const posAnterior = miBola.position.clone();
+    let movido = false;
 
-    if (teclas['w'] || teclas['ArrowUp']) miBola.position.z -= velBase;
-    if (teclas['s'] || teclas['ArrowDown']) miBola.position.z += velBase;
-    if (teclas['a'] || teclas['ArrowLeft']) miBola.position.x -= velBase;
-    if (teclas['d'] || teclas['ArrowRight']) miBola.position.x += velBase;
+    if (teclas['w'] || teclas['ArrowUp']) { miBola.position.z -= velBase; movido = true; }
+    if (teclas['s'] || teclas['ArrowDown']) { miBola.position.z += velBase; movido = true; }
+    if (teclas['a'] || teclas['ArrowLeft']) { miBola.position.x -= velBase; movido = true; }
+    if (teclas['d'] || teclas['ArrowRight']) { miBola.position.x += velBase; movido = true; }
 
-    miBola.position.x += inclinacionX * 10;
-    miBola.position.z += inclinacionZ * 10;
+    if (Math.abs(inclinacionX) > 0.1) { miBola.position.x += inclinacionX * 12; movido = true; }
+    if (Math.abs(inclinacionZ) > 0.1) { miBola.position.z += inclinacionZ * 12; movido = true; }
 
     const cajaBola = new THREE.Box3().setFromObject(miBola);
     let chocado = false;
@@ -163,7 +170,7 @@ function animar() {
         miBola.position.x -= dir.x * 0.7; miBola.position.z -= dir.z * 0.7;
     }
 
-    socket.emit('mover', { x: miBola.position.x, z: miBola.position.z });
+    if (movido) socket.emit('mover', { x: miBola.position.x, z: miBola.position.z });
 
     if (alturaCamara === 1500) { camara.position.set(0, 1500, 0.5); camara.lookAt(0,0,0); }
     else { camara.position.set(miBola.position.x, alturaCamara, miBola.position.z + 0.1); camara.lookAt(miBola.position.x, 0, miBola.position.z); }
